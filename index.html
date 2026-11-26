@@ -19,6 +19,7 @@
         <li><a href="#install">Install</a></li>
         <li><a href="#hardware">Hardware</a></li>
         <li><a href="#data">Data size</a></li>
+        <li><a href="build.html">Build</a></li>
         <li><a href="#sources">Sources</a></li>
       </ul>
     </div>
@@ -57,6 +58,9 @@
         <p>For data analysis the useful test is not HumanEval alone. Plotly and Mila’s <a href="https://plotly.com/blog/introducing-dataanalyticsbench/">DataAnalyticsBench</a> (43 questions against a messy 19.9 million-row, 44-table warehouse, updated 25 November 2026) is the most relevant public board found for this job. It also measures whether a model asks for clarification, refuses impossible questions, and spots dirty data. Official vendor benches (LiveCodeBench, SWE-Bench, GPQA, Terminal-Bench, BFCL) are listed too, always with a source link. Those tests measure different skills; do not average them.</p>
         <div class="callout ok">
           <strong>How to use a local model on real data.</strong> Do not paste a 2 GB CSV into the prompt. Have the model write pandas, Polars, DuckDB or SQL, execute that code in a sandbox against the full file or warehouse, and send back only the query results. Dataset size is then limited by your RAM and disk, not by the context window. Setup is in <a href="#data">How much data</a>.
+        </div>
+        <div class="callout">
+          <strong>Next: build on a model you picked.</strong> <a href="build.html">Build on these models</a> is a beginner guide to three ways to go further: retrieval over your own notes (RAG), a small LoRA/QLoRA fine-tune, and what “training from scratch” actually means, including a tiny GPT you can run on a laptop.
         </div>
       </div>
     </section>

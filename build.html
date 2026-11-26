@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Beginner guide: RAG, LoRA/QLoRA fine-tuning, and training a tiny GPT from scratch, with a glossary and copy-paste commands. Updated 26 November 2026.">
+  <title>Build on these models: RAG, fine-tuning, training from scratch</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site">
+    <div class="wrap nav">
+      <a class="brand" href="index.html">Open-weight data analysis</a>
+      <ul class="nav-links">
+        <li><a href="index.html">Models</a></li>
+        <li><a href="#choose">Which approach</a></li>
+        <li><a href="#rag">RAG</a></li>
+        <li><a href="#finetune">Fine-tune</a></li>
+        <li><a href="#scratch">From scratch</a></li>
+        <li><a href="#roadmap">Roadmap</a></li>
+        <li><a href="#glossary">Glossary</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <main id="top">
+    <div class="wrap hero">
+      <p class="kicker">Beginner guide · commands checked against official docs on 26 November 2026</p>
+      <h1>Build on these models: RAG, fine-tuning, training from scratch</h1>
+      <p class="lede">You already have a local model from the <a href="index.html">model guide</a>. This page is how to put your own notes or tables next to it, how to teach it a stable format, and why training a new model from nothing is a lab project. Every specialist word is defined the first time it appears, and again in the <a href="#glossary">glossary</a>.</p>
+      <div class="meta-row">
+        <span>Plain language, then copy-paste steps</span>
+        <span>Costs marked approximate</span>
+        <span>Scripts were not executed in this repo</span>
+      </div>
+      <ul class="page-nav">
+        <li><a href="#choose">Which approach</a></li>
+        <li><a href="#rag">RAG</a></li>
+        <li><a href="#finetune">Fine-tune</a></li>
+        <li><a href="#scratch">From scratch</a></li>
+        <li><a href="#roadmap">Roadmap</a></li>
+        <li><a href="#glossary">Glossary</a></li>
+      </ul>
+    </div>
+
+    <section id="choose">
+      <div class="wrap">
+        <h2>Which approach should I use?</h2>
+        <p class="section-intro">A <strong>weight</strong> is one stored number inside the model. The full set of those numbers is what you download. <strong>Inference</strong> means using those weights to produce text. You do not need to change the weights to ask a question.</p>
+        <p>A <strong>token</strong> is the unit the model reads and writes. It is often a piece of a word, not a whole word. The <strong>context window</strong> is the maximum number of tokens the model can look at in one request, counting your question, any notes you attached, and the answer it is writing.</p>
+        <p>A <strong>prompt</strong> is the text you send in that request. <strong>RAG</strong> (retrieval-augmented generation) means searching your own files and pasting the matching passages into the prompt. <strong>Fine-tuning</strong> means continuing training so some weights change. <strong>Pretraining</strong> means the first, huge training run that creates those weights from random numbers.</p>
+
+        <div class="flow" aria-label="Decision flow">
+          <div class="box"><strong>1. What is missing?</strong><span>Facts, a format, or the whole model.</span></div>
+          <span class="arr" aria-hidden="true">→</span>
+          <div class="box"><strong>Facts that change</strong><span>Notes, policies, rows. Use RAG or SQL.</span></div>
+          <span class="arr" aria-hidden="true">→</span>
+          <div class="box"><strong>A stable format</strong><span>Always this SQL shape. Fine-tune.</span></div>
+          <span class="arr" aria-hidden="true">→</span>
+          <div class="box"><strong>A new model</strong><span>Only if you are a lab. Learn on nanoGPT.</span></div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Your situation</th>
+                <th scope="col">Use</th>
+                <th scope="col">Leave the weights</th>
+                <th scope="col">Why</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>The model already knows the skill. You need a reminder of your schema or house style.</td>
+                <td>Prompting</td>
+                <td>Unchanged</td>
+                <td>The context window can hold a schema, a few sample rows, and the rules.</td>
+              </tr>
+              <tr>
+                <td>The answer depends on documents or rows the model has never seen, and those files will change.</td>
+                <td>RAG, or SQL/pandas over the real file</td>
+                <td>Unchanged</td>
+                <td>You can replace a file without a new training run. The model cites or queries the current copy.</td>
+              </tr>
+              <tr>
+                <td>The task is a fixed skill: “given this schema, emit one DuckDB SELECT.” You have checked examples.</td>
+                <td>Fine-tuning (LoRA or QLoRA)</td>
+                <td>A small add-on is trained</td>
+                <td>The format is learned. The facts should still come from the prompt, RAG, or the database.</td>
+              </tr>
+              <tr>
+                <td>You want a model that knows a language or domain from raw text, and you have a cluster and a large corpus.</td>
+                <td>Pretraining, or continued pretraining</td>
+                <td>Created, or broadly updated</td>
+                <td>This is how base weights are made. A laptop can only do a toy version.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note">
+          Fine-tuning is a poor place to store facts that go stale (“our refund window is 30 days”). Those belong in a document or a table. Fine-tuning is a good place to store a behaviour that should stay fixed.
+        </div>
+      </div>
+    </section>
+
+    <section id="rag">
+      <div class="wrap">
+        <h2>1. RAG and tool use with your own data</h2>
+        <p>Run a chat model locally with <a href="https://ollama.com/">Ollama</a>. Two patterns follow. Both leave the weights unchanged.</p>
+        <p>An <strong>embedding</strong> is a list of numbers that stands for a piece of text. Texts with similar meaning get lists that point in similar directions. A <strong>vector database</strong> stores those lists and, given a new list, returns the closest stored ones. <strong>Retrieval</strong> is that search. <strong>Chunking</strong> is cutting a long document into pieces small enough to embed and to paste back into the prompt.</p>
+
+        <h3 class="layer"><span>Basic</span> Document RAG</h3>
+        <p>What you are doing: you keep your notes on disk. At question time you search for the passages that look closest to the question, put those passages in the prompt, and ask the model to answer only from them and to name the file each passage came from.</p>
+        <p>Why: the model’s training data does not contain your private notes, and you can edit a note without training again.</p>
+        <p>When: the knowledge is text (policies, wikis, PDFs you have already turned into text) and it does not fit in one prompt, or it changes.</p>
+        <p>Mechanism, in order:</p>
+        <ol>
+          <li>Split each document into chunks. Overlap them: the next chunk starts before the previous one ends, so a sentence that sits on the cut still appears whole in one chunk.</li>
+          <li>Send each chunk to an embedding model. Here that is Ollama’s <a href="https://ollama.com/library/nomic-embed-text"><code>nomic-embed-text</code></a> (about a 2,048-token window) or <a href="https://ollama.com/library/bge-m3"><code>bge-m3</code></a> (8,192-token window, embedding length 1,024 on the Ollama model card). Do not mix the two in one index: the lists have different lengths, and the database will reject the mix.</li>
+          <li>Store each list with the original text and the filename. This example uses <a href="https://docs.trychroma.com/docs/run-chroma/clients">Chroma</a>. <a href="https://github.com/facebookresearch/faiss">FAISS</a> is a local index library. <a href="https://github.com/pgvector/pgvector">pgvector</a> stores the lists in PostgreSQL.</li>
+          <li>Embed the question with the same model. Ask the database for the nearest chunks.</li>
+          <li>Build a prompt: the question, then the chunks, each labelled with its filename. That labelling is how the answer can cite sources.</li>
+        </ol>
+        <div class="flow" aria-label="Document RAG flow">
+          <div class="box"><strong>Files</strong><span>Notes on disk</span></div>
+          <span class="arr" aria-hidden="true">→</span>
+          <div class="box"><strong>Chunks</strong><span>Short overlapping pieces</span></div>
+          <span class="arr" aria-hidden="true">→</span>
+          <div class="box"><strong>Embeddings</strong><span>One number-list each</span></div>
+          <span class="arr" aria-hidden="true">→</span>
+          <div class="box"><strong>Vector store</strong><span>Chroma, FAISS, or pgvector</span></div>
+          <span class="arr" aria-hidden="true">→</span>
+          <div class="box"><strong>Prompt</strong><span>Question plus cited chunks</span></div>
+          <span class="arr" aria-hidden="true">→</span>
+          <div class="box"><strong>Answer</strong><span>Chat model, sources named</span></div>
+        </div>
+        <div class="glance">
+          <article>
+            <h4>Money</h4>
+            <p>About $0 if Ollama is already running on your machine. You download one small embedding model (nomic-embed-text is a few hundred MB; bge-m3 is about 1.2 GB on the Ollama library page).</p>
+          </article>
+          <article>
+            <h4>Time</h4>
+            <p>Minutes to index a handful of notes. Re-index when a file changes. No training step.</p>
+          </article>
+          <article>
+            <h4>Hardware</h4>
+            <p>Whatever already runs your chat model. The embedding model is much smaller than a 7B chat model.</p>
+          </article>
+        </div>
+
+        <h3 class="layer"><span>Basic</span> Data analysis by writing SQL</h3>
+        <p>What you are doing: the model never sees the whole table. It sees the column names, a few sample rows, and the question. It writes a <code>SELECT</code>. Your program runs that statement in <a href="https://duckdb.org/docs/stable/clients/python/overview">DuckDB</a> (or pandas) and shows the result.</p>
+        <p>Why: a warehouse does not fit in the context window. The <a href="index.html#data">model guide</a> uses this pattern for that reason.</p>
+        <p>When: the source of truth is a table, not a paragraph. Prefer this over document RAG for “what was the total in 2024?”</p>
+        <div class="flow" aria-label="SQL tool-use flow">
+          <div class="box"><strong>Schema + 5 rows</strong><span>Not the full file</span></div>
+          <span class="arr" aria-hidden="true">→</span>
+          <div class="box"><strong>Chat model</strong><span>Writes one SELECT</span></div>
+          <span class="arr" aria-hidden="true">→</span>
+          <div class="box"><strong>Check</strong><span>Single read-only query</span></div>
+          <span class="arr" aria-hidden="true">→</span>
+          <div class="box"><strong>DuckDB</strong><span>Runs it on the real table</span></div>
+          <span class="arr" aria-hidden="true">→</span>
+          <div class="box"><strong>Result table</strong><span>Shown to you</span></div>
+        </div>
+        <div class="glance">
+          <article>
+            <h4>Money</h4>
+            <p>About $0 locally. DuckDB is an in-process library; there is no separate database server to rent.</p>
+          </article>
+          <article>
+            <h4>Time</h4>
+            <p>One model call per question, usually seconds after the model is loaded, plus the query time.</p>
+          </article>
+          <article>
+            <h4>Hardware</h4>
+            <p>The chat model’s hardware from the <a href="index.html#hardware">hardware section</a>. DuckDB uses CPU and disk.</p>
+          </article>
+        </div>
+        <div class="callout ok">
+          A <strong>sandbox</strong> is a restricted place to run code. The filter below is a teaching check, not a security product. Prefer DuckDB opened with <code>read_only=True</code>, no network, and a timeout. Read <a href="index.html#safety">Safe to use</a> before you point this at real files.
+        </div>
+
+        <h3 class="layer"><span>Detailed</span> Document RAG, step by step</h3>
+        <ol class="steps">
+          <li>Install Ollama and pull a chat model plus an embedding model. Pick the chat tag from the <a href="index.html#install">install section</a> that fits your RAM. The embedding tags below are on the Ollama library.
+            <div class="copy-row">
+              <pre><code>curl -fsSL https://ollama.com/install.sh | sh
+ollama pull nomic-embed-text
+# alternative embedding model: ollama pull bge-m3
+ollama pull granite4.1:8b</code></pre>
+              <button class="copy-btn" type="button" data-copy>Copy</button>
+            </div>
+          </li>
+          <li>Install the Python packages. The chat and embed calls match the <a href="https://github.com/ollama/ollama-python">Ollama Python library</a> and the <a href="https://docs.ollama.com/api/embed">embed API</a> (<code>input</code> in, <code>embeddings</code> out). Ollama’s embed endpoint returns L2-normalized vectors.
+            <div class="copy-row">
+              <pre><code>pip install ollama chromadb</code></pre>
+              <button class="copy-btn" type="button" data-copy>Copy</button>
+            </div>
+          </li>
+          <li>Save this as <code>rag_docs.py</code>. It chunks plain text, stores embeddings in Chroma, retrieves three chunks, and asks the chat model to answer with filenames. The embedding class follows Chroma’s <a href="https://docs.trychroma.com/docs/embeddings/embedding-functions">custom embedding function</a> shape: <code>__call__(self, input)</code>.
+            <div class="copy-row">
+              <pre><code>import ollama
+import chromadb
+from chromadb import Documents, EmbeddingFunction, Embeddings
+from chromadb.utils.embedding_functions import register_embedding_function
+
+CHAT_MODEL = "granite4.1:8b"          # swap for a model you already pulled
+EMBED_MODEL = "nomic-embed-text"      # do not mix with bge-m3 in this folder
+NOTES = [
+    ("refunds.md", "Refunds are allowed within 30 days of delivery. After 30 days, store credit only."),
+    ("shipping.md", "Standard shipping takes 3 to 5 business days. Express shipping takes 1 business day."),
+    ("tax.md", "A 5 percent goods tax applies to electronics. Books are tax exempt."),
+]
+
+def chunks(text, size=800, overlap=120):
+    parts = []
+    start = 0
+    while start &lt; len(text):
+        end = min(len(text), start + size)
+        parts.append(text[start:end])
+        if end == len(text):
+            break
+        start = end - overlap
+    return parts
+
+@register_embedding_function
+class OllamaEmbedder(EmbeddingFunction):
+    def __init__(self, model: str = EMBED_MODEL):
+        self.model = model
+
+    def __call__(self, input: Documents) -&gt; Embeddings:
+        response = ollama.embed(model=self.model, input=list(input))
+        return response["embeddings"]
+
+    @staticmethod
+    def name() -&gt; str:
+        return "ollama-embed"
+
+    def get_config(self):
+        return {"model": self.model}
+
+    @staticmethod
+    def build_from_config(config):
+        return OllamaEmbedder(config["model"])
+
+client = chromadb.PersistentClient(path="chroma_notes")
+collection = client.get_or_create_collection(
+    "notes",
+    embedding_function=OllamaEmbedder(),
+)
+ids, docs, metas = [], [], []
+for name, text in NOTES:
+    for i, piece in enumerate(chunks(text)):
+        ids.append(f"{name}-{i}")
+        docs.append(piece)
+        metas.append({"source": name})
+collection.upsert(ids=ids, documents=docs, metadatas=metas)
+
+question = "How long do I have for a cash refund?"
+hits = collection.query(query_texts=[question], n_results=3)
+blocks = []
+for doc, meta in zip(hits["documents"][0], hits["metadatas"][0]):
+    blocks.append(f"[{meta['source']}]\n{doc}")
+prompt = (
+    "Answer using only the notes. Then list the source filenames you used.\n\n"
+    + "\n\n".join(blocks)
+    + "\n\nQuestion: "
+    + question
+)
+reply = ollama.chat(model=CHAT_MODEL, messages=[{"role": "user", "content": prompt}])
+print(reply.message.content)</code></pre>
+              <button class="copy-btn" type="button" data-copy>Copy</button>
+            </div>
+          </li>
+          <li>Run it with <code>python rag_docs.py</code> while the Ollama app is running. The first call loads the embedding model.</li>
+          <li>Optional stores, if you outgrow the Chroma folder. FAISS keeps a matrix in memory. Because Ollama’s vectors are L2-normalized, inner product equals cosine similarity:
+            <div class="copy-row">
+              <pre><code>import faiss
+import numpy as np
+# vectors: embedding lists you already computed with one model
+# query_vector: the embedding of the question, same model
+matrix = np.asarray(vectors, dtype="float32")
+index = faiss.IndexFlatIP(matrix.shape[1])
+index.add(matrix)
+scores, row_ids = index.search(np.asarray([query_vector], dtype="float32"), 3)</code></pre>
+              <button class="copy-btn" type="button" data-copy>Copy</button>
+            </div>
+            <p>In PostgreSQL with pgvector, <code>&lt;=&gt;</code> is cosine distance. Set the vector length to <code>len(one_embedding)</code>, not a guessed number:</p>
+            <div class="copy-row">
+              <pre><code>CREATE EXTENSION IF NOT EXISTS vector;
+CREATE TABLE chunks (
+  id bigserial PRIMARY KEY,
+  source text,
+  content text,
+  embedding vector(1024)
+);
+SELECT source, content
+FROM chunks
+ORDER BY embedding &lt;=&gt; '[...]'::vector
+LIMIT 3;</code></pre>
+              <button class="copy-btn" type="button" data-copy>Copy</button>
+            </div>
+          </li>
+        </ol>
+
+        <h3 class="layer"><span>Detailed</span> SQL sandbox, step by step</h3>
+        <ol class="steps">
+          <li>Install DuckDB and build a tiny database you can check by hand.
+            <div class="copy-row">
+              <pre><code>pip install duckdb ollama</code></pre>
+              <button class="copy-btn" type="button" data-copy>Copy</button>
+            </div>
+          </li>
+          <li>Save as <code>sql_sandbox.py</code>. The model call is <code>ollama.chat</code>, as in the <a href="https://docs.ollama.com/api/chat">chat API</a>. The database is opened read-only for the question. The word filter is extra, and it is not a full SQL parser.
+            <div class="copy-row">
+              <pre><code>import duckdb
+import ollama
+
+CHAT_MODEL = "granite4.1:8b"
+BANNED = {
+    "insert", "update", "delete", "drop", "alter", "attach", "copy",
+    "pragma", "install", "load", "export", "create", "replace", "call",
+}
+
+def only_select(sql: str) -&gt; str:
+    text = sql.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[-1]
+        if text.rstrip().endswith("```"):
+            text = text.rstrip()[:-3]
+    text = text.strip().rstrip(";").strip()
+    if ";" in text:
+        raise ValueError("Only one statement is allowed.")
+    first = text.split(None, 1)[0].lower()
+    if first not in ("select", "with"):
+        raise ValueError("Only SELECT or WITH is allowed.")
+    words = set(text.lower().replace("(", " ").replace(")", " ").split())
+    found = words.intersection(BANNED)
+    if found:
+        raise ValueError("Refusing: " + ", ".join(sorted(found)))
+    return text
+
+setup = duckdb.connect("warehouse.duckdb")
+setup.execute("""
+CREATE OR REPLACE TABLE orders AS
+SELECT * FROM (VALUES
+  (1, 'Ada', 20.0, DATE '2024-03-01'),
+  (2, 'Lin', 15.5, DATE '2023-11-02'),
+  (3, 'Ada', 9.0,  DATE '2024-07-19')
+) t(id, customer, amount, ordered_on)
+""")
+setup.close()
+
+con = duckdb.connect("warehouse.duckdb", read_only=True)
+schema = con.execute("DESCRIBE orders").fetchdf().to_string(index=False)
+sample = con.execute("SELECT * FROM orders LIMIT 5").fetchdf().to_string(index=False)
+question = "What is the total order amount in 2024?"
+prompt = f"""Write one DuckDB SELECT and nothing else.
+Schema of table orders:
+{schema}
+
+Sample rows:
+{sample}
+
+Question: {question}
+"""
+reply = ollama.chat(model=CHAT_MODEL, messages=[{"role": "user", "content": prompt}])
+sql = only_select(reply.message.content)
+print(sql)
+print(con.execute(sql).fetchdf())</code></pre>
+              <button class="copy-btn" type="button" data-copy>Copy</button>
+            </div>
+          </li>
+          <li>Run <code>python sql_sandbox.py</code>. A correct statement returns 29.0 (20.0 + 9.0). If the model adds commentary, the fence-stripper keeps the SQL; if it writes <code>DROP</code> or a second statement, the script stops.</li>
+          <li>For a CSV you already have, point DuckDB at the file instead of <code>VALUES</code>: <code>SELECT * FROM read_csv('orders.csv')</code>. DuckDB can also query a pandas dataframe that is in scope by its variable name. Keep the same read-only rule.</li>
+        </ol>
+
+        <h3>How to tell if retrieval or SQL is working</h3>
+        <ul>
+          <li>Write 10 questions whose answers you already know, and record which file or row holds the answer. That set is a <strong>holdout</strong>: you do not use it to tweak the prompt until you have looked once.</li>
+          <li>For RAG, check recall: is the right chunk among the top 3? Then check the citation: does the filename the model prints match that chunk? A fluent answer that cites the wrong file is a failure.</li>
+          <li>For SQL, run the model’s statement and your own statement. Compare the result tables, not the spelling of the SQL.</li>
+        </ul>
+        <h3>Common mistakes</h3>
+        <ul>
+          <li>Chunks larger than the embedding model’s window. <code>nomic-embed-text</code> is about 2,048 tokens. The script uses 800 characters so an English chunk is likely to fit; that is a character budget, not a token count. A token is not a fixed number of characters.</li>
+          <li>One index, two embedding models.</li>
+          <li>Pasting a whole CSV into the chat and calling it RAG.</li>
+          <li>No filename on the chunk, so the answer cannot cite a source.</li>
+          <li>Forgetting to re-embed after you edit a note.</li>
+          <li>Running model-written SQL with permission to write.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="finetune">
+      <div class="wrap">
+        <h2>2. Fine-tuning with LoRA and QLoRA</h2>
+        <p><strong>LoRA</strong> (low-rank adaptation) does not rewrite every weight. It adds small matrices beside the frozen ones and trains only those. The size of those matrices is the <strong>rank</strong> (<code>r</code>). <strong>QLoRA</strong> is LoRA while the frozen weights are stored in 4-bit form. <strong>Quantization</strong> means storing each weight in fewer bits. 16-bit weights become 4-bit weights, so the file and the GPU memory get smaller, and some accuracy is traded away.</p>
+        <p>An <strong>epoch</strong> is one pass through every training example. The <strong>learning rate</strong> is the step size for each update. Too large, and the numbers thrash. Too small, and they barely move. A <strong>loss</strong> is a score of how wrong the current prediction is; training tries to reduce it. A <strong>checkpoint</strong> is a saved copy of the weights at some step.</p>
+        <p><strong>GGUF</strong> is a file format used by llama.cpp and Ollama to run a quantized model. <code>q4_k_m</code> is one 4-bit quantization recipe: Unsloth’s docs describe it as Q6_K for half of certain attention and feed-forward tensors and Q4_K for the rest.</p>
+
+        <h3 class="layer"><span>Basic</span> When to fine-tune</h3>
+        <p>Prompt the model if a clear instruction plus the schema is enough. Use RAG or SQL if the missing piece is a fact that lives in a file. Fine-tune when you have many examples of a behaviour you want every time, such as “reply with one DuckDB SELECT and no prose,” and prompting still wanders.</p>
+        <p>Suggested first project: text-to-SQL on one schema you can check. The schema stays in the prompt. The fine-tune teaches the dialect and the habit of answering with SQL. It should not memorize this month’s totals.</p>
+        <div class="flow" aria-label="Fine-tuning flow">
+          <div class="box"><strong>Checked examples</strong><span>Question, schema, correct SQL</span></div>
+          <span class="arr" aria-hidden="true">→</span>
+          <div class="box"><strong>Holdout</strong><span>Examples you do not train on</span></div>
+          <span class="arr" aria-hidden="true">→</span>
+          <div class="box"><strong>QLoRA</strong><span>4-bit base, small adapter</span></div>
+          <span class="arr" aria-hidden="true">→</span>
+          <div class="box"><strong>Compare</strong><span>Base vs tuned, run the SQL</span></div>
+          <span class="arr" aria-hidden="true">→</span>
+          <div class="box"><strong>Export</strong><span>GGUF, then Ollama</span></div>
+        </div>
+
+        <h3>Dataset, in plain language</h3>
+        <p>Each example is one chat: a system rule, a user message that contains the schema and the question, and an assistant message that is only the SQL. Store one JSON object per line. That file is JSONL.</p>
+        <p>How many: start small enough that you can read all of them. A few dozen hand-checked pairs tell you if the idea works. A few hundred, still checked, are a reasonable next size for this narrow task. More rows do not fix wrong SQL. These counts are practical advice, not a measured threshold.</p>
+        <p>Quality: every assistant SQL must run on your database and return the result you expect. Split by question, not by duplicate wording of the same question. Put about one in five questions into the holdout and do not train on them.</p>
+        <p>Synthetic data: a stronger model may draft pairs. Then run every statement. Discard errors and wrong results. Read a sample yourself after the automatic check. Do not train on drafts you have not executed.</p>
+
+        <h3>Hardware at a glance</h3>
+        <p>The model in the script is <a href="https://huggingface.co/unsloth/Qwen2.5-7B-Instruct-unsloth-bnb-4bit">unsloth/Qwen2.5-7B-Instruct-unsloth-bnb-4bit</a>, a 4-bit copy of <a href="https://huggingface.co/Qwen/Qwen2.5-7B-Instruct">Qwen2.5-7B-Instruct</a> (7.61B parameters, Apache 2.0). Times below are orders of magnitude for a few hundred short examples and 2 epochs, not a benchmark from this repository. GPU rental figures are approximate list prices from <a href="https://www.runpod.io/pricing">Runpod’s pricing page, updated 12 November 2026</a>. Storage and data transfer are extra. Re-check the page before you rent.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Place</th>
+                <th scope="col">Memory</th>
+                <th scope="col">What fits</th>
+                <th scope="col">Approximate time</th>
+                <th scope="col">Approximate price</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Free Google Colab, T4 GPU</td>
+                <td>16 GB</td>
+                <td>This 7B QLoRA script at batch size 1 and context 2048. Unsloth publishes a <a href="https://colab.research.google.com/github/unslothai/notebooks/blob/main/nb/Qwen2.5_(7B)-Alpaca.ipynb">Qwen2.5 7B Colab notebook</a> aimed at that free T4.</td>
+                <td>Often a few hours. The free session can stop early. Availability is Google’s, and it changes.</td>
+                <td>About $0 while the free GPU is offered. Limits apply. Source: that Unsloth notebook and the <a href="https://unsloth.ai/docs/get-started/install/google-colab">Colab install page</a>.</td>
+              </tr>
+              <tr>
+                <td>RTX 3090</td>
+                <td>24 GB</td>
+                <td>The same 7–8B QLoRA job with a bit more room for batch or context.</td>
+                <td>Often well under a few hours for a few hundred short rows.</td>
+                <td>Runpod shows $0.50/hr on the Secure Cloud view, and from $0.22/hr on Community Cloud.</td>
+              </tr>
+              <tr>
+                <td>RTX 4090</td>
+                <td>24 GB</td>
+                <td>Same job, usually faster than a 3090.</td>
+                <td>Often the shortest of these consumer cards for this small run.</td>
+                <td>Runpod shows $0.89/hr Secure Cloud, from $0.34/hr Community Cloud.</td>
+              </tr>
+              <tr>
+                <td>A100 80 GB PCIe, rented</td>
+                <td>80 GB</td>
+                <td>Longer context, larger batches, or a bigger model than 7–8B.</td>
+                <td>Unnecessary for the first text-to-SQL project. Useful if you move to a larger base model.</td>
+                <td>Runpod shows $2.09/hr Secure Cloud, from $1.19/hr Community Cloud.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="layer"><span>Detailed</span> QLoRA script, step by step</h3>
+        <ol class="steps">
+          <li>Make two JSONL files. <code>train.jsonl</code> is what the trainer sees. <code>holdout.jsonl</code> is not. One training line looks like this (put the schema you actually have in the user message):
+            <div class="copy-row">
+              <pre><code>{"messages":[{"role":"system","content":"You write one DuckDB SELECT and no other text."},{"role":"user","content":"Schema:\norders(id INT, customer VARCHAR, amount DOUBLE, ordered_on DATE)\n\nQuestion: total amount in 2024"},{"role":"assistant","content":"SELECT SUM(amount) AS total FROM orders WHERE ordered_on &gt;= DATE '2024-01-01' AND ordered_on &lt; DATE '2025-01-01';"}]}</code></pre>
+              <button class="copy-btn" type="button" data-copy>Copy</button>
+            </div>
+            <p>Write more lines for other questions on this same schema. Keep at least a handful of different questions in <code>holdout.jsonl</code>.</p>
+          </li>
+          <li>Install Unsloth in a GPU environment. Follow the install cell on the <a href="https://unsloth.ai/docs/get-started/install/google-colab">Colab page</a> for Colab, or <code>pip install unsloth</code> on your own CUDA machine if that import works. You also need a recent <code>trl</code>, <code>transformers</code>, and <code>datasets</code>, which Unsloth’s install pulls in. Log in only when you are ready to upload: <code>hf auth login</code> (<a href="https://huggingface.co/docs/huggingface_hub/quick-start">Hub quickstart</a>).</li>
+          <li>Save <code>train_qlora.py</code>. It matches the current <a href="https://huggingface.co/docs/trl/unsloth_integration">TRL Unsloth integration</a> and <a href="https://huggingface.co/docs/trl/sft_trainer">SFTTrainer</a>: <code>FastLanguageModel.from_pretrained(..., load_in_4bit=True)</code>, <code>get_peft_model</code> with <code>r=16</code>, and <code>SFTConfig</code>. The trainer parameter for the tokenizer is <code>processing_class</code>. Older Unsloth notebooks pass <code>tokenizer=</code>; that name is not in the current TRL signature. The script turns each chat into a prompt and a completion so the loss is on the SQL, which is TRL’s default for that format. <code>eos_token</code> is set to Qwen’s end-of-turn token, as the TRL docs show for Qwen tokenizers.
+            <div class="copy-row">
+              <pre><code>from datasets import load_dataset
+from trl import SFTConfig, SFTTrainer
+from unsloth import FastLanguageModel
+
+max_seq_length = 2048
+model, tokenizer = FastLanguageModel.from_pretrained(
+    model_name="unsloth/Qwen2.5-7B-Instruct-unsloth-bnb-4bit",
+    max_seq_length=max_seq_length,
+    load_in_4bit=True,
+)
+model = FastLanguageModel.get_peft_model(
+    model,
+    r=16,
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                    "gate_proj", "up_proj", "down_proj"],
+    lora_alpha=16,
+    lora_dropout=0,   # Unsloth documents 0 as the optimized setting
+    bias="none",
+    use_gradient_checkpointing="unsloth",
+    random_state=3407,
+)
+
+raw = load_dataset("json", data_files={"train": "train.jsonl", "test": "holdout.jsonl"})
+
+def to_prompt_completion(row):
+    prompt = [m for m in row["messages"] if m["role"] != "assistant"]
+    completion = [m for m in row["messages"] if m["role"] == "assistant"]
+    return {"prompt": prompt, "completion": completion}
+
+train_ds = raw["train"].map(to_prompt_completion, remove_columns=raw["train"].column_names)
+holdout_ds = raw["test"].map(to_prompt_completion, remove_columns=raw["test"].column_names)
+
+trainer = SFTTrainer(
+    model=model,
+    processing_class=tokenizer,
+    train_dataset=train_ds,
+    eval_dataset=holdout_ds,
+    args=SFTConfig(
+        output_dir="outputs",
+        num_train_epochs=2,          # use 3 only if holdout SQL is still improving
+        learning_rate=2e-4,
+        per_device_train_batch_size=1,
+        gradient_accumulation_steps=4,
+        max_length=max_seq_length,
+        logging_steps=10,
+        eval_strategy="epoch",       # older transformers called this evaluation_strategy
+        optim="adamw_8bit",
+        warmup_ratio=0.03,
+        lr_scheduler_type="linear",
+        seed=3407,
+        eos_token="&lt;|im_end|&gt;",
+    ),
+)
+trainer.train()
+model.save_pretrained("lora_adapter")
+tokenizer.save_pretrained("lora_adapter")</code></pre>
+              <button class="copy-btn" type="button" data-copy>Copy</button>
+            </div>
+          </li>
+          <li>Run <code>python train_qlora.py</code> on the GPU machine. Watch two numbers. Training loss should fall. Holdout loss should not explode while training loss goes to zero. Also run the SQL test in the next step; loss alone does not tell you the query is right.</li>
+          <li>Compare the untouched base model and the adapter on the holdout. Execute both SQL strings. A match of result tables is the score that matters.
+            <div class="copy-row">
+              <pre><code>import duckdb
+from unsloth import FastLanguageModel
+
+model, tokenizer = FastLanguageModel.from_pretrained(
+    model_name="lora_adapter",
+    max_seq_length=2048,
+    load_in_4bit=True,
+)
+FastLanguageModel.for_inference(model)
+
+def answer(user_text):
+    messages = [
+        {"role": "system", "content": "You write one DuckDB SELECT and no other text."},
+        {"role": "user", "content": user_text},
+    ]
+    inputs = tokenizer.apply_chat_template(
+        messages, tokenize=True, add_generation_prompt=True, return_tensors="pt"
+    ).to(model.device)
+    output = model.generate(input_ids=inputs, max_new_tokens=128, use_cache=True, do_sample=False)
+    return tokenizer.decode(output[0][inputs.shape[-1]:], skip_special_tokens=True)
+
+con = duckdb.connect("warehouse.duckdb", read_only=True)
+question = "Schema:\norders(id INT, customer VARCHAR, amount DOUBLE, ordered_on DATE)\n\nQuestion: total amount in 2024"
+gold = "SELECT SUM(amount) AS total FROM orders WHERE ordered_on &gt;= DATE '2024-01-01' AND ordered_on &lt; DATE '2025-01-01'"
+predicted = answer(question)
+print("PREDICTED:", predicted)
+print("GOLD ROWS:", con.execute(gold).fetchall())
+print("PRED ROWS:", con.execute(predicted.strip().rstrip(";")).fetchall())</code></pre>
+              <button class="copy-btn" type="button" data-copy>Copy</button>
+            </div>
+            <p>Also ask the tuned model one ordinary question it used to answer (“What is 17 times 4?”). If the SQL got better and ordinary answers collapsed, that is <strong>catastrophic forgetting</strong>: the new training overwrote useful behaviour. <strong>Overfitting</strong> is the narrower case where training examples are memorized and the holdout gets worse. Signs: training loss near zero, holdout SQL that only works on questions copied from the training file, or nonsense on anything else. Responses: fewer epochs, a smaller learning rate, more varied examples, and a handful of ordinary chat examples mixed in.</p>
+          </li>
+          <li>Other trainers, if you do not want this script. <a href="https://docs.axolotl.ai/docs/getting-started.html">Axolotl</a> uses a YAML file. Its quickstart says QLoRA is <code>load_in_4bit: true</code> and <code>adapter: qlora</code>, then <code>axolotl train your-config.yaml</code>. A short config for this dataset:
+            <div class="copy-row">
+              <pre><code>base_model: Qwen/Qwen2.5-7B-Instruct
+load_in_4bit: true
+adapter: qlora
+lora_r: 16
+lora_alpha: 16
+lora_target_linear: true
+datasets:
+  - path: train.jsonl
+    type: chat_template
+    field_messages: messages
+val_set_size: 0.1
+num_epochs: 2
+learning_rate: 0.0002
+micro_batch_size: 1
+gradient_accumulation_steps: 4
+output_dir: ./outputs/qlora-out</code></pre>
+              <button class="copy-btn" type="button" data-copy>Copy</button>
+            </div>
+            <p><a href="https://huggingface.co/docs/trl/sft_trainer">TRL</a> can also attach LoRA without Unsloth, via <code>peft_config=LoraConfig(r=16, lora_alpha=16, target_modules="all-linear")</code> on <code>SFTTrainer</code>. That path is full-precision LoRA unless you add a 4-bit load yourself. Unsloth is the QLoRA path spelled out above. Qwen3-8B (<a href="https://huggingface.co/unsloth/Qwen3-8B-unsloth-bnb-4bit">unsloth/Qwen3-8B-unsloth-bnb-4bit</a>, also Apache 2.0) is a newer 8B alternative. Its default “thinking” mode writes a reasoning trace before the answer; for SQL, turn that off in <code>apply_chat_template(..., enable_thinking=False)</code> as the <a href="https://huggingface.co/Qwen/Qwen3-8B">Qwen3-8B card</a> describes. The script stays on Qwen2.5-Instruct so the target output is just SQL.</p>
+          </li>
+          <li>Export. <a href="https://unsloth.ai/docs/basics/inference-and-deployment/saving-to-gguf">Unsloth’s GGUF page</a> shows:
+            <div class="copy-row">
+              <pre><code>model.save_pretrained_gguf("gguf_out", tokenizer, quantization_method="q4_k_m")</code></pre>
+              <button class="copy-btn" type="button" data-copy>Copy</button>
+            </div>
+            <p>That call merges the adapter into a GGUF file under <code>gguf_out</code>. The exact filename is the <code>.gguf</code> file that appears there; do not guess it. Unsloth also writes a <code>Modelfile</code> (the project maintainer confirmed that behaviour in 2026). Prefer that file: a <strong>chat template</strong> is the pattern that wraps system, user, and assistant turns, and the Modelfile should carry the same one you trained with. If you must write one by hand, point <code>FROM</code> at the GGUF you actually got (<a href="https://docs.ollama.com/modelfile">Modelfile reference</a>):</p>
+            <div class="copy-row">
+              <pre><code>FROM ./the-file-you-got.Q4_K_M.gguf
+PARAMETER temperature 0
+PARAMETER num_ctx 4096</code></pre>
+              <button class="copy-btn" type="button" data-copy>Copy</button>
+            </div>
+            <div class="copy-row">
+              <pre><code>ollama create text-to-sql -f Modelfile
+ollama run text-to-sql</code></pre>
+              <button class="copy-btn" type="button" data-copy>Copy</button>
+            </div>
+          </li>
+          <li>Publish the adapter, not only the GGUF, so other people can see what you trained. Put a model card at <code>lora_adapter/README.md</code> first. Then, from the <a href="https://huggingface.co/docs/huggingface_hub/en/guides/upload">upload guide</a>:
+            <div class="copy-row">
+              <pre><code>hf auth login
+python - &lt;&lt;'PY'
+from huggingface_hub import HfApi
+api = HfApi()
+api.create_repo("YOUR_USER/qwen25-7b-text-to-sql", exist_ok=True)
+api.upload_folder(
+    folder_path="lora_adapter",
+    repo_id="YOUR_USER/qwen25-7b-text-to-sql",
+)
+PY</code></pre>
+              <button class="copy-btn" type="button" data-copy>Copy</button>
+            </div>
+            <p>The card should name the base model, the dataset (what the questions were, how many, how you checked them), the holdout result, and the license. <strong>License carry-over:</strong> Qwen2.5-7B-Instruct is <a href="https://huggingface.co/Qwen/Qwen2.5-7B-Instruct/blob/main/LICENSE">Apache 2.0</a>. A fine-tune is a derivative work. Ship that license with the weights, and say that you changed them. You may add your own license terms for your modifications only if the Apache terms are still met. If you instead fine-tune a custom-license model from the <a href="index.html#models">model cards</a> (Kimi, Hy4, MiniMax, and others), that model’s license is the one that applies. Do not relabel it Apache 2.0.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="scratch">
+      <div class="wrap">
+        <h2>3. Training from scratch</h2>
+        <p><strong>Pretraining</strong> starts from random weights and predicts the next token across a huge text collection. There are no question-and-answer pairs. The model’s knowledge is whatever patterns that prediction carved into the weights.</p>
+        <p>A <strong>tokenizer</strong> is the program that turns text into token ids and back. The Shakespeare exercise below uses a character tokenizer: one character, one id, a vocabulary of a few dozen symbols. Qwen and GPT-2 use a byte-pair tokenizer: frequent character sequences are merged into single tokens. You cannot take weights trained with one tokenizer and feed them ids from another. The ids would mean different pieces of text.</p>
+
+        <h3 class="layer"><span>Basic</span> What “from scratch” costs</h3>
+        <p>A widely used planning rule, from the Chinchilla paper (<a href="https://arxiv.org/abs/2203.15556">Hoffmann et al., 2022</a>), is on the order of 20 training tokens per parameter. A 7-billion-parameter model then wants on the order of 100 billion tokens. That is a cluster, a prepared corpus, and a bill measured in many GPU-days. Frontier runs are larger still: trillions of tokens. This page does not quote a dollar total for those runs, because a serious figure needs a named cluster price and a named token count, and those vary by lab.</p>
+        <p>What you can run yourself is a toy. Andrej Karpathy’s <a href="https://github.com/karpathy/nanoGPT">nanoGPT</a> trains a 6-layer GPT on the tiny Shakespeare file (about 1 MB). His README says that config takes about 3 minutes on one A100 and reaches a validation loss around 1.47, and that a smaller CPU run takes about 3 minutes with a worse loss around 1.88. The same README says reproducing GPT-2 (124M) on OpenWebText takes about 4 days on one 8×A100 40GB node. In November 2025 he marked nanoGPT as old and pointed people at nanochat. The Shakespeare recipe is still the small, readable one, so it is the exercise here.</p>
+        <p><strong>Continued pretraining</strong> is the middle ground. You start from weights that already exist and keep doing next-token prediction on your own text (manuals, code, papers), still without chat labels. nanoGPT’s <code>train.py</code> accepts <code>--init_from=gpt2</code> (also <code>gpt2-medium</code>, <code>gpt2-large</code>, <code>gpt2-xl</code>) for that idea, but only with a dataset that uses the GPT-2 tokenizer. The character-level Shakespeare config is not that dataset. Do not point <code>--init_from=gpt2</code> at <code>train_shakespeare_char.py</code>.</p>
+        <div class="flow" aria-label="Pretraining learning path">
+          <div class="box"><strong>Toy</strong><span>nanoGPT, Shakespeare, laptop or Colab</span></div>
+          <span class="arr" aria-hidden="true">→</span>
+          <div class="box"><strong>Middle</strong><span>Continue from GPT-2 on your text</span></div>
+          <span class="arr" aria-hidden="true">→</span>
+          <div class="box"><strong>Lab</strong><span>Billions of parameters, billions of tokens</span></div>
+        </div>
+        <div class="glance">
+          <article>
+            <h4>Money</h4>
+            <p>About $0 for the Shakespeare character model on a laptop or a free Colab GPU. The GPT-2 reproduction in the README is days of 8×A100 time.</p>
+          </article>
+          <article>
+            <h4>Time</h4>
+            <p>Minutes for the toy, as timed in the nanoGPT README. Not a stand-in for a 7B pretrain.</p>
+          </article>
+          <article>
+            <h4>Hardware</h4>
+            <p>CPU is enough for the smaller command below. A Colab T4 or any recent NVIDIA GPU runs the default Shakespeare config.</p>
+          </article>
+        </div>
+
+        <h3 class="layer"><span>Detailed</span> Tiny GPT, step by step</h3>
+        <ol class="steps">
+          <li>Clone the repository and prepare the character-level data. <code>prepare.py</code> downloads the tiny Shakespeare file if it is not already there (it uses <code>requests</code>), builds a character vocabulary, and writes <code>train.bin</code> and <code>val.bin</code>. The larger GPT-2 reproduction in the same README needs more packages; this path does not.
+            <div class="copy-row">
+              <pre><code>git clone https://github.com/karpathy/nanoGPT
+cd nanoGPT
+pip install torch numpy requests
+python data/shakespeare_char/prepare.py</code></pre>
+              <button class="copy-btn" type="button" data-copy>Copy</button>
+            </div>
+          </li>
+          <li>Train. On a GPU, including a Colab T4 runtime:
+            <div class="copy-row">
+              <pre><code>python train.py config/train_shakespeare_char.py</code></pre>
+              <button class="copy-btn" type="button" data-copy>Copy</button>
+            </div>
+            <p>That config, from the repository, is a 6-layer, 6-head model, 384 feature channels, context of 256 characters, learning rate <code>1e-3</code>, 5,000 iterations. Checkpoints go to <code>out-shakespeare-char</code>.</p>
+          </li>
+          <li>On a laptop CPU, use the smaller command from the README. <code>--device=cpu</code> and <code>--compile=False</code> are required there:
+            <div class="copy-row">
+              <pre><code>python train.py config/train_shakespeare_char.py --device=cpu --compile=False --eval_iters=20 --log_interval=1 --block_size=64 --batch_size=12 --n_layer=4 --n_head=4 --n_embd=128 --max_iters=2000 --lr_decay_iters=2000 --dropout=0.0</code></pre>
+              <button class="copy-btn" type="button" data-copy>Copy</button>
+            </div>
+          </li>
+          <li>Sample text from the checkpoint:
+            <div class="copy-row">
+              <pre><code>python sample.py --out_dir=out-shakespeare-char
+# CPU:
+python sample.py --out_dir=out-shakespeare-char --device=cpu</code></pre>
+              <button class="copy-btn" type="button" data-copy>Copy</button>
+            </div>
+          </li>
+          <li>Read <code>model.py</code> while it trains. It is a small GPT: tokens go in, a stack of attention layers mixes them, and the model predicts a distribution over the next character. The loss is how surprised it was by the actual next character. That is the whole of pretraining, at a size you can see.</li>
+          <li>If you later try continued pretraining, use a GPT-2-tokenized dataset and <code>--init_from=gpt2</code>, as <code>train.py</code> documents. Keep the Shakespeare character run as the from-scratch lesson.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="roadmap">
+      <div class="wrap">
+        <h2>Roadmap for a beginner</h2>
+        <p class="section-intro">One thread: a single known schema, then notes, then a small fine-tune, then a look at real pretraining. Stop when the holdout SQL is good enough. You do not need all eight weeks to be useful.</p>
+        <ol class="steps">
+          <li><strong>Week 1.</strong> Install Ollama and run one model from the <a href="index.html#install">install section</a>. Ask it for a DuckDB <code>SELECT</code> against a schema you paste by hand. Run the SQL yourself and compare.</li>
+          <li><strong>Week 2.</strong> Put three short notes through <code>rag_docs.py</code>. Change a sentence in a note, re-run the upsert, and see the answer change. That is the point of RAG.</li>
+          <li><strong>Week 3.</strong> Load one real CSV with DuckDB’s <code>read_csv</code> and use <code>sql_sandbox.py</code>. Keep the connection read-only.</li>
+          <li><strong>Week 4.</strong> Write 40 to 80 text-to-SQL lines for that one schema. Run every statement. Move about one in five questions to <code>holdout.jsonl</code>.</li>
+          <li><strong>Week 5.</strong> Run the QLoRA script on a free Colab T4 or a 24 GB card. Compare base and tuned models by executing SQL, not by reading the loss alone.</li>
+          <li><strong>Week 6.</strong> Export <code>q4_k_m</code>, <code>ollama create</code>, and write the model card. Include the Apache 2.0 license if the base model is Qwen2.5.</li>
+          <li><strong>Week 7.</strong> Clone nanoGPT and train the Shakespeare character model. Read <code>model.py</code>. Notice that this did not teach SQL.</li>
+          <li><strong>Week 8.</strong> Decide. If your holdout questions are about changing documents or tables, invest in RAG and the SQL sandbox. If the model still refuses to emit clean SQL, add checked examples and fine-tune again. Do not start a pretraining run to fix either problem.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="glossary">
+      <div class="wrap">
+        <h2>Glossary</h2>
+        <p class="section-intro">Short definitions for the words used above. The first time each word appears in the guide, the sentence there is the definition that counts.</p>
+        <dl class="glossary">
+          <dt id="glossary-token">Token</dt>
+          <dd>A piece of text the model treats as one step. Often smaller than a word. Different tokenizers split the same sentence differently.</dd>
+          <dt>Tokenizer</dt>
+          <dd>The program that converts text to token ids and ids back to text. Weights only make sense with the tokenizer they were trained with.</dd>
+          <dt>Context window</dt>
+          <dd>The maximum number of tokens in one request, including the prompt and the answer being written.</dd>
+          <dt>Prompt</dt>
+          <dd>The text you send to the model for one request.</dd>
+          <dt>Inference</dt>
+          <dd>Using a trained model to produce text. No weights have to change.</dd>
+          <dt>Weight</dt>
+          <dd>One stored number inside the model. The file you download is the full set of weights.</dd>
+          <dt>Parameter</dt>
+          <dd>A weight the training process was allowed to set. “7B” means about 7 billion of them.</dd>
+          <dt>Embedding</dt>
+          <dd>A list of numbers that represents a piece of text, used so that similar texts land near each other.</dd>
+          <dt>Vector database</dt>
+          <dd>A store that keeps embeddings and returns the closest ones to a new embedding. Chroma, FAISS, and pgvector are three options in this guide.</dd>
+          <dt>Chunking</dt>
+          <dd>Cutting a document into pieces that fit an embedding model and a prompt. Overlap keeps a sentence from being sliced with no intact copy.</dd>
+          <dt>Retrieval</dt>
+          <dd>The search that returns those nearby chunks.</dd>
+          <dt>RAG</dt>
+          <dd>Retrieval-augmented generation: retrieve chunks, put them in the prompt, then generate an answer. The weights stay as they were.</dd>
+          <dt>Sandbox</dt>
+          <dd>A restricted place to run code the model wrote. Read-only database access, no network, and a timeout are the useful restrictions.</dd>
+          <dt>Schema</dt>
+          <dd>The column names and types of a table. It is what the model needs to write SQL. It is not the rows.</dd>
+          <dt>Fine-tuning</dt>
+          <dd>More training on a model that already has weights, so that behaviour changes. In this guide it is supervised: each example has a target answer.</dd>
+          <dt>LoRA</dt>
+          <dd>Low-rank adaptation. Small matrices are added and trained; the original weights stay frozen.</dd>
+          <dt>Rank</dt>
+          <dd>The width of those LoRA matrices. The script uses <code>r=16</code>.</dd>
+          <dt>QLoRA</dt>
+          <dd>LoRA while the frozen base weights are loaded in 4-bit quantization.</dd>
+          <dt>Quantization</dt>
+          <dd>Storing weights in fewer bits. Smaller and faster, with some loss of accuracy. <code>q4_k_m</code> is one 4-bit GGUF recipe.</dd>
+          <dt>GGUF</dt>
+          <dd>A file format llama.cpp and Ollama use to load a quantized model.</dd>
+          <dt>Epoch</dt>
+          <dd>One full pass over the training examples. The script uses 2.</dd>
+          <dt>Learning rate</dt>
+          <dd>How large each weight update is. The script uses <code>2e-4</code> (0.0002) for QLoRA.</dd>
+          <dt>Loss</dt>
+          <dd>A number that is lower when predictions match the training targets. It is not a substitute for running the SQL.</dd>
+          <dt>Checkpoint</dt>
+          <dd>Weights saved at a point in training so you can resume or compare.</dd>
+          <dt>Holdout</dt>
+          <dd>Examples you never train on, used once to see if the model works on questions it has not memorized.</dd>
+          <dt>Overfitting</dt>
+          <dd>Training performance keeps improving while holdout performance gets worse. The model has memorized the training set.</dd>
+          <dt>Catastrophic forgetting</dt>
+          <dd>The new task works, and older skills the base model had no longer work.</dd>
+          <dt>Pretraining</dt>
+          <dd>The first training run: next-token prediction on a large corpus, starting from random weights.</dd>
+          <dt>Continued pretraining</dt>
+          <dd>Next-token prediction that starts from existing weights and a new corpus, without chat labels.</dd>
+          <dt>Chat template</dt>
+          <dd>The exact wrapping of system, user, and assistant turns. Training and Ollama must use the same one.</dd>
+          <dt>Modelfile</dt>
+          <dd>Ollama’s text file that names a GGUF (or another base model) and the parameters and template used to create a local model.</dd>
+          <dt>Adapter</dt>
+          <dd>The small set of trained LoRA matrices, saved separately from the base model. <code>lora_adapter</code> in the script.</dd>
+          <dt>Base model</dt>
+          <dd>The model you start from. Here, Qwen2.5-7B-Instruct in a 4-bit Unsloth build.</dd>
+        </dl>
+
+        <h3>Sources for the commands and the prices</h3>
+        <ul class="src-list">
+          <li><a href="https://github.com/ollama/ollama-python">Ollama Python library</a> · <a href="https://docs.ollama.com/api/chat">chat</a> · <a href="https://docs.ollama.com/api/embed">embed</a> · <a href="https://docs.ollama.com/modelfile">Modelfile</a></li>
+          <li><a href="https://ollama.com/library/nomic-embed-text">nomic-embed-text</a> · <a href="https://ollama.com/library/bge-m3">bge-m3</a></li>
+          <li><a href="https://docs.trychroma.com/docs/run-chroma/clients">Chroma PersistentClient</a> · <a href="https://docs.trychroma.com/docs/embeddings/embedding-functions">embedding functions</a></li>
+          <li><a href="https://github.com/facebookresearch/faiss">FAISS</a> · <a href="https://github.com/pgvector/pgvector">pgvector</a> · <a href="https://duckdb.org/docs/stable/clients/python/overview">DuckDB Python</a></li>
+          <li><a href="https://huggingface.co/docs/trl/unsloth_integration">TRL + Unsloth</a> · <a href="https://huggingface.co/docs/trl/sft_trainer">SFTTrainer</a> · <a href="https://unsloth.ai/docs/basics/inference-and-deployment/saving-to-gguf">save GGUF</a> · <a href="https://docs.axolotl.ai/docs/getting-started.html">Axolotl quickstart</a></li>
+          <li><a href="https://huggingface.co/Qwen/Qwen2.5-7B-Instruct">Qwen2.5-7B-Instruct</a> · <a href="https://huggingface.co/Qwen/Qwen2.5-7B-Instruct/blob/main/LICENSE">Apache 2.0</a> · <a href="https://huggingface.co/unsloth/Qwen2.5-7B-Instruct-unsloth-bnb-4bit">Unsloth 4-bit weights</a> · <a href="https://huggingface.co/Qwen/Qwen3-8B">Qwen3-8B</a></li>
+          <li><a href="https://huggingface.co/docs/huggingface_hub/quick-start">hf auth login</a> · <a href="https://huggingface.co/docs/huggingface_hub/en/guides/upload">upload_folder</a></li>
+          <li><a href="https://github.com/karpathy/nanoGPT">nanoGPT</a> · <a href="https://arxiv.org/abs/2203.15556">Chinchilla paper</a></li>
+          <li><a href="https://www.runpod.io/pricing">Runpod GPU prices (page updated 12 Nov 2026)</a> · <a href="https://unsloth.ai/docs/get-started/install/google-colab">Unsloth on Colab</a></li>
+        </ul>
+        <div class="note">
+          Commands were read from those pages on 26 November 2026. They were not run end to end in this repository. GPU prices and free-Colab availability move; the table is approximate and dated.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>Part of the open-weight data-analysis guide, 26 November 2026. Model names and licenses belong to their publishers. Read the license that ships with any weights you fine-tune before you upload a derivative.</p>
+    </div>
+  </footer>
+  <script>
+    document.body.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-copy]");
+      if (!btn) return;
+      const code = btn.parentElement.querySelector("code")?.innerText || "";
+      try {
+        await navigator.clipboard.writeText(code);
+        btn.textContent = "Copied";
+        setTimeout(() => { btn.textContent = "Copy"; }, 1500);
+      } catch {
+        btn.textContent = "Select text";
+      }
+    });
+  </script>
+</body>
+</html>

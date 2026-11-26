@@ -15,6 +15,7 @@ Live site (GitHub Pages, once enabled): see the repository Pages URL.
 - Hardware / VRAM notes and approximate cloud GPU prices
 - How much data a model can handle, and the agentic DuckDB/SQL pattern that lifts the limit off the context window
 - A candid “safe to use” section (privacy, licenses, country-of-origin policy, safetensors, sandboxing)
+- [Build on these models](build.html): a beginner guide to RAG, LoRA/QLoRA fine-tuning, and training from scratch, with a glossary, a “which approach” table, and copy-paste commands checked against official docs on 26 November 2026
 
 ## Run locally
 

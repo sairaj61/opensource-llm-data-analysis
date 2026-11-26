@@ -263,6 +263,67 @@ tbody tr:hover { background: #f8f4ec; }
   border-left: 2px solid var(--line);
   margin-left: 0.7rem;
 }
+.page-nav { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1.1rem 0 0; padding: 0; list-style: none; }
+.page-nav a {
+  text-decoration: none;
+  color: var(--ink);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.22rem 0.7rem;
+  font-size: 0.88rem;
+}
+.page-nav a:hover { color: var(--accent); border-color: var(--accent); }
+
+.glance { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; margin: 0.8rem 0 1.2rem; }
+.glance article {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.85rem 0.95rem;
+  box-shadow: var(--shadow);
+}
+.glance h4 { margin: 0 0 0.25rem; font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+.glance p { margin: 0; }
+
+.flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.4rem;
+  margin: 0.8rem 0 1.2rem;
+}
+.flow .box {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  min-width: 8.2rem;
+  max-width: 14rem;
+  box-shadow: var(--shadow);
+}
+.flow .box strong { display: block; font-size: 0.92rem; }
+.flow .box span { display: block; color: var(--ink-soft); font-size: 0.82rem; line-height: 1.35; }
+.flow .arr { align-self: center; color: var(--accent); font-weight: 700; padding: 0 0.1rem; }
+
+.layer { margin-top: 1.6rem; font-size: 1.25rem; }
+.layer span {
+  display: inline-block;
+  margin-right: 0.4rem;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 0.12rem 0.45rem;
+  vertical-align: middle;
+}
+
+.glossary dt { font-weight: 700; margin-top: 0.85rem; }
+.glossary dd { margin: 0.15rem 0 0; color: var(--ink); }
+
 .steps li::before {
   counter-increment: step;
   content: counter(step);
@@ -292,7 +353,7 @@ footer {
 }
 
 @media (max-width: 860px) {
-  .pills, .grid-2 { grid-template-columns: 1fr; }
+  .pills, .grid-2, .glance { grid-template-columns: 1fr; }
   .nav-links { display: none; }
   h1 { max-width: none; }
 }
