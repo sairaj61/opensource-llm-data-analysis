@@ -288,14 +288,14 @@ index.add(matrix)
 scores, row_ids = index.search(np.asarray([query_vector], dtype="float32"), 3)</code></pre>
               <button class="copy-btn" type="button" data-copy>Copy</button>
             </div>
-            <p>In PostgreSQL with pgvector, <code>&lt;=&gt;</code> is cosine distance. Set the vector length to <code>len(one_embedding)</code>, not a guessed number:</p>
+            <p>In PostgreSQL with pgvector, <code>&lt;=&gt;</code> is cosine distance. The vector length has to match one embedding from the model you actually used. Ollama’s bge-m3 card lists length 1,024. <code>nomic-embed-text</code> is a different length; print <code>len(vector)</code> and use that number in <code>vector(N)</code>.</p>
             <div class="copy-row">
               <pre><code>CREATE EXTENSION IF NOT EXISTS vector;
 CREATE TABLE chunks (
   id bigserial PRIMARY KEY,
   source text,
   content text,
-  embedding vector(1024)
+  embedding vector(1024)  -- 1024 is bge-m3 on Ollama; change N for other models
 );
 SELECT source, content
 FROM chunks
