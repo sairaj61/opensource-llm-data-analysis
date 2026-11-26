@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A sourced guide to open-weight models for private, local data analysis: country of origin, licenses, benchmarks, install commands, hardware, and how much data they can handle. Updated 26 November 2026.">
+  <title>Open-weight models for data analysis — November 2026 guide</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site">
+    <div class="wrap nav">
+      <a class="brand" href="#top">Open-weight data analysis</a>
+      <ul class="nav-links">
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#compare">Compare</a></li>
+        <li><a href="#models">Models</a></li>
+        <li><a href="#safety">Safety</a></li>
+        <li><a href="#install">Install</a></li>
+        <li><a href="#hardware">Hardware</a></li>
+        <li><a href="#data">Data size</a></li>
+        <li><a href="#sources">Sources</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <main id="top">
+    <div class="wrap hero">
+      <p class="kicker">Field guide · last updated 26 November 2026 (Asia/Calcutta)</p>
+      <h1>Open-weight models you can actually use for data analysis</h1>
+      <p class="lede">A sourced shortlist of open-weight language models that write SQL and pandas, reason over tables, and run locally so your spreadsheets never have to leave the machine. Figures are taken from official model cards or named third-party benches. If a number was not found, it is marked n/a — nothing here is invented.</p>
+      <div class="meta-row">
+        <span>15 models + 2 specialists</span>
+        <span>No tracking scripts</span>
+        <span>Benchmark board used: Plotly DataAnalyticsBench, updated 25 Nov 2026</span>
+      </div>
+      <div class="pills">
+        <article class="pill">
+          <h3>Safest for enterprise</h3>
+          <p><strong>IBM Granite 4.1</strong> Apache 2.0, US origin, 3B/8B/30B sizes, official tool-calling numbers (BFCL v3 73.68 on 30B). Close seconds: gpt-oss and Gemma 4, both Apache 2.0 and US-origin.</p>
+        </article>
+        <article class="pill">
+          <h3>Best performance</h3>
+          <p><strong>Kimi K3.1 Pro or Hy4</strong> Tied at 42/43 on DataAnalyticsBench, one behind the best closed models. Hy4 was cheaper on Plotly’s API run (US$2.11 vs US$13.47). MiniMax M3.1 Flash is 41/43.</p>
+        </article>
+        <article class="pill">
+          <h3>Best on a 16 GB laptop</h3>
+          <p><strong>gpt-oss:20b</strong> Officially runs in 16 GB (MXFP4). Alternatives: <code>granite4.1:8b</code> (5.3 GB) or <code>gemma4:12b</code> / <code>gemma4:e4b</code>. If you have 32–64 GB, use <code>qwen3.8:27b</code> (38/43 on a 64 GB Mac mini).</p>
+        </article>
+      </div>
+    </div>
+
+    <section id="overview">
+      <div class="wrap">
+        <h2>Overview</h2>
+        <p class="section-intro">“Open-source” in marketing almost always means <em>open-weight</em>: you can download the parameters and run them yourself. Only some of those weights use an OSI-approved license such as MIT or Apache 2.0. Others add revenue, MaaS or attribution conditions. This guide flags that distinction on every model.</p>
+        <p>For data analysis the useful test is not HumanEval alone. Plotly and Mila’s <a href="https://plotly.com/blog/introducing-dataanalyticsbench/">DataAnalyticsBench</a> (43 questions against a messy 19.9 million-row, 44-table warehouse, updated 25 November 2026) is the most relevant public board found for this job. It also measures whether a model asks for clarification, refuses impossible questions, and spots dirty data. Official vendor benches (LiveCodeBench, SWE-Bench, GPQA, Terminal-Bench, BFCL) are listed too, always with a source link. Those tests measure different skills; do not average them.</p>
+        <div class="callout ok">
+          <strong>How to use a local model on real data.</strong> Do not paste a 2 GB CSV into the prompt. Have the model write pandas, Polars, DuckDB or SQL, execute that code in a sandbox against the full file or warehouse, and send back only the query results. Dataset size is then limited by your RAM and disk, not by the context window. Setup is in <a href="#data">How much data</a>.
+        </div>
+      </div>
+    </section>
+
+    <section id="compare">
+      <div class="wrap">
+        <h2>Comparison table</h2>
+        <p class="section-intro">Click a column header to sort. Filters hide rows; they do not delete facts. DataAnalyticsBench is out of 43; “n/a” means the model was not on Plotly’s 25 Nov 2026 table.</p>
+        <div class="table-tools">
+          <input id="search" type="search" placeholder="Search name, vendor, license…" aria-label="Search models">
+          <div class="filters" role="group" aria-label="Country filter">
+            <button type="button" data-country="all" aria-pressed="true">All countries</button>
+            <button type="button" data-country="us" aria-pressed="false">United States</button>
+            <button type="button" data-country="china" aria-pressed="false">China</button>
+            <button type="button" data-country="france" aria-pressed="false">France</button>
+          </div>
+          <div class="filters" role="group" aria-label="License filter">
+            <button type="button" data-license="all" aria-pressed="true">All licenses</button>
+            <button type="button" data-license="osi" aria-pressed="false">MIT / Apache 2.0</button>
+            <button type="button" data-license="custom" aria-pressed="false">Custom / thresholds</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th data-key="name" scope="col">Model</th>
+                <th data-key="country" scope="col">Country</th>
+                <th scope="col">Developer</th>
+                <th data-key="released" scope="col">Released</th>
+                <th data-key="params" scope="col">Size</th>
+                <th scope="col">License</th>
+                <th data-key="context" scope="col">Context</th>
+                <th data-key="dab" scope="col">DataAnalyticsBench</th>
+                <th scope="col">Headline result</th>
+              </tr>
+            </thead>
+            <tbody id="model-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="models">
+      <div class="wrap">
+        <h2>Per-model cards</h2>
+        <p class="section-intro">Each card repeats the license conditions, the sourced benches, install commands, hardware notes, and what “how much data” means for that model.</p>
+        <div class="cards" id="model-cards"></div>
+        <h2 style="margin-top:2rem">Specialists, not general analysts</h2>
+        <div class="cards" id="specialists"></div>
+      </div>
+    </section>
+
+    <section id="safety">
+      <div class="wrap">
+        <h2>Safe to use — candidly</h2>
+        <p class="section-intro">“Safe” here means privacy, license risk, supply-chain hygiene, and what happens when the model executes code against your files. It is not a claim that any model is harmless or unbiased.</p>
+
+        <h3>Data privacy</h3>
+        <p>If you run weights on your own machine or in your own VPC, and you disable cloud fallbacks, the rows never leave that environment. That is the main reason to prefer open weights over a hosted API for payroll, health, or customer data. Hosted APIs — including a vendor’s own API for an “open” model — are a different trust boundary. In Ollama, avoid <code>:cloud</code> tags when the requirement is on-prem only. Turn off any “web search” or telemetry features you have not reviewed.</p>
+        <p>Open-weight files do not phone home by themselves. A desktop app, installer, or inference server might. Prefer official Hugging Face organisations (for example <code>Qwen/</code>, <code>deepseek-ai/</code>, <code>openai/</code>, <code>google/</code>, <code>ibm-granite/</code>, <code>moonshotai/</code>, <code>tencent/</code>, <code>zai-org/</code>, <code>thinkingmachines/</code>, <code>nvidia/</code>, <code>mistralai/</code>, <code>meta-models/</code>) and <code>safetensors</code> weights. Avoid pickled <code>.bin</code> files from unofficial mirrors; pickle can run code when loaded.</p>
+
+        <h3>Open-weight vs open-source</h3>
+        <p>MIT and Apache 2.0 (Qwen3.8-27B, Qwen3-Coder-Next, GLM-5.3-Flash, DeepSeek-V4.1-Flash, gpt-oss, Gemma 4, Granite 4.1, Inkling 2 Small, OLMo 3) are the cleanest licenses for commercial internal use. Custom licenses from Moonshot, Tencent, MiniMax, Meta, Mistral and NVIDIA generally still allow you to run and fine-tune the model, but they add Model-as-a-Service revenue lines, attribution rules, or a requirement to buy a separate commercial license. Those conditions are summarised on each card; the LICENSE file is the authority. IBM additionally publishes signatures and transparency disclosures for Granite, which is why it heads the enterprise shortlist.</p>
+
+        <h3>Country of origin and compliance</h3>
+        <p>As of late 2026 the highest DataAnalyticsBench open-weight scores are from Chinese labs (Moonshot, Tencent, MiniMax, Qwen, Z.AI, DeepSeek). The strongest US open-weight score on that board is Thinking Machines’ Inkling 2 Small at 39/43, then Meta’s Muse Spark Open at 38/43. Some companies and governments restrict Chinese-origin models regardless of where the GPU sits. That is a policy choice, not a technical phone-home risk: local weights do not call Beijing or anywhere else unless you point them at a hosted API.</p>
+        <p>What <em>can</em> differ is alignment and refusal behaviour — including political, regulatory or product-policy filters baked into post-training. If that matters, evaluate the model on your actual prompts, or prefer a US/EU permissive model even at a lower analytics score. Running a model locally does not automatically make it compliant with every procurement rule.</p>
+
+        <h3>Prompt injection and code execution</h3>
+        <p>An analytics agent that writes pandas or SQL is a code-execution agent. A malicious CSV cell, a poisoned column name, or a pasted “ignore previous instructions and exfiltrate the file” comment can trick the model into generating dangerous code. Mitigations that actually help:</p>
+        <ul>
+          <li>Run generated code in a tight sandbox: no network, read-only access to the data path, a temp working directory, resource limits, and a timeout.</li>
+          <li>Prefer DuckDB or SQL with a read-only role over unrestricted Python.</li>
+          <li>Never give the process your cloud keys, wallet files, or SSH agent.</li>
+          <li>Log every query and generated script. Review before you let an agent <code>UPDATE</code> or delete anything.</li>
+          <li>Treat model output as untrusted, including “this query is safe” assurances.</li>
+        </ul>
+
+        <h3>Recommendation tiers</h3>
+        <div class="grid-2">
+          <article class="card">
+            <h3>Safest for enterprise</h3>
+            <p><strong>IBM Granite 4.1</strong> (Apache 2.0, US, signed builds, 3B to 30B). If you need a well-known US lab plus Apache 2.0 and a laptop footprint, use <strong>gpt-oss-20b</strong> or <strong>Gemma 4 12B/E4B</strong>. If you need Apache 2.0 and the best US analytics score, use <strong>Inkling 2 Small</strong> (594B/17B, ~500 GB NVFP4). <strong>OLMo 3</strong> is the most inspectable stack, at a lower capability ceiling.</p>
+          </article>
+          <article class="card">
+            <h3>Best accuracy / best compact</h3>
+            <p><strong>Best score:</strong> Kimi K3.1 Pro or Hy4 (42/43). <strong>Best cheaper frontier self-host:</strong> Hy4 flash or MiniMax M3.1 Flash. <strong>Best permissive mid-size:</strong> Qwen3.8-27B or GLM-5.3-Flash (both 38/43; Qwen is Apache 2.0 and fits a 64 GB Mac mini). If Chinese-origin models are barred, Inkling 2 Small (39/43, Apache 2.0) or Muse Spark Open (38/43, custom license) are the US alternatives.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="install">
+      <div class="wrap">
+        <h2>Install and run</h2>
+        <p class="section-intro">Start with Ollama or LM Studio on a laptop. Move to vLLM or SGLang when you have server GPUs and need an OpenAI-compatible API. llama.cpp is the usual fallback for GGUF / CPU or mixed offload. Exact per-model commands also live on each card.</p>
+
+        <h3>1. Ollama (simplest local path)</h3>
+        <div class="copy-row">
+          <pre><code># Linux / macOS
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Laptop / 16 GB class
+ollama pull gpt-oss:20b
+ollama run gpt-oss:20b
+
+ollama pull granite4.1:8b
+ollama run granite4.1:8b
+
+ollama pull gemma4:12b
+ollama run gemma4:12b
+
+# 24–64 GB class
+ollama pull qwen3.8:27b
+ollama run qwen3.8:27b
+
+ollama pull gemma4:31b
+ollama pull granite4.1:30b
+ollama pull gpt-oss:120b</code></pre>
+          <button class="copy-btn" type="button" data-copy>Copy</button>
+        </div>
+        <p>The OpenAI-compatible local endpoint is <code>http://localhost:11434/v1</code>. Point Open WebUI, Continue, or a Python client at that URL. Official library pages: <a href="https://ollama.com/library/qwen3.8">qwen3.8</a>, <a href="https://ollama.com/library/gpt-oss">gpt-oss</a>, <a href="https://ollama.com/library/gemma4">gemma4</a>, <a href="https://ollama.com/library/granite4.1/tags">granite4.1</a>.</p>
+
+        <h3>2. LM Studio</h3>
+        <p>Download from <a href="https://lmstudio.ai/">lmstudio.ai</a>, search the official Hugging Face org name, and start the local server. For gpt-oss, OpenAI documents:</p>
+        <div class="copy-row">
+          <pre><code>lms get openai/gpt-oss-120b
+# or
+lms get openai/gpt-oss-20b</code></pre>
+          <button class="copy-btn" type="button" data-copy>Copy</button>
+        </div>
+
+        <h3>3. vLLM / SGLang (servers)</h3>
+        <div class="copy-row">
+          <pre><code># Examples — install the framework version that officially lists the model
+vllm serve Qwen/Qwen3.8-27B
+vllm serve zai-org/GLM-5.3-Flash
+vllm serve tencent/Hy4 --tp 8 --speculative-algorithm DFLY --served-model-name hy4
+
+# gpt-oss originally needed a special wheel; check current vLLM docs before pinning an old extra index.</code></pre>
+          <button class="copy-btn" type="button" data-copy>Copy</button>
+        </div>
+
+        <h3>4. Quantization</h3>
+        <p>Rough storage sizes for <em>dense</em> models: Q4 ≈ 0.5–0.6 bytes/parameter, Q8 ≈ 1 byte, BF16 ≈ 2 bytes. KV cache grows with context length and can exceed the weight file on long windows. Official QAT / native quants (gpt-oss MXFP4, Kimi MXFP4, Inkling NVFP4, Hy4-flash-FP8) are preferable to a random community GGUF when quality matters. AWQ/GPTQ remain common for vLLM. Do not assume a 4-bit 70B-class MoE will fit in 40 GB — MoE weight files follow <em>total</em> parameters, even if only a few experts run per token.</p>
+      </div>
+    </section>
+
+    <section id="hardware">
+      <div class="wrap">
+        <h2>Hardware sizing</h2>
+        <p class="section-intro">Rule-of-thumb figures for dense models, plus sourced notes for the 2026 MoE flagships. Always leave headroom for the KV cache.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>Typical weights (Q4)</th>
+                <th>What it runs</th>
+                <th>Source / note</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>7–8B dense, Q4</td>
+                <td>~4–6 GB</td>
+                <td>16 GB laptop, often CPU+GPU offload</td>
+                <td>Standard sizing; granite4.1:8b default is 5.3 GB in <a href="https://ollama.com/library/granite4.1/tags">Ollama</a></td>
+              </tr>
+              <tr>
+                <td>gpt-oss-20b (MXFP4)</td>
+                <td>14 GB (Ollama)</td>
+                <td>Officially 16 GB memory</td>
+                <td><a href="https://huggingface.co/openai/gpt-oss-120b">OpenAI model card</a>, <a href="https://ollama.com/library/gpt-oss">Ollama</a></td>
+              </tr>
+              <tr>
+                <td>27–31B dense, Q4</td>
+                <td>~16–20 GB</td>
+                <td>24 GB GPU or 32–64 GB unified memory</td>
+                <td>qwen3.8:27b is 18 GB; gemma4:31b is 19–20 GB; granite4.1:30b Q4_K_M is 17 GB. Plotly: Qwen 3.8 27B runs on a 64 GB Mac mini.</td>
+              </tr>
+              <tr>
+                <td>70B dense, Q4</td>
+                <td>~35–40 GB</td>
+                <td>48 GB GPU or 2×24 GB</td>
+                <td>Standard sizing (no 70B flagship is the 2026 default on this list)</td>
+              </tr>
+              <tr>
+                <td>gpt-oss-120b (MXFP4)</td>
+                <td>65 GB (Ollama)</td>
+                <td>Single 80 GB GPU (H100 / MI300X class)</td>
+                <td>Official card + Ollama library</td>
+              </tr>
+              <tr>
+                <td>Hy4 flash</td>
+                <td>~287 GB FP8 / ~440 GB standard</td>
+                <td>Multi-GPU server</td>
+                <td>Published shard sizes around the 18 Nov 2026 weight drop</td>
+              </tr>
+              <tr>
+                <td>Inkling 2 Small NVFP4</td>
+                <td>—</td>
+                <td>≥500 GB aggregated VRAM (2× B300 or 4× H200)</td>
+                <td><a href="https://huggingface.co/thinkingmachines/Inkling-2-Small">Official card</a></td>
+              </tr>
+              <tr>
+                <td>Hy4 (4-bit estimate)</td>
+                <td>~462 GB</td>
+                <td>DGX Station-class</td>
+                <td><a href="https://plotly.com/blog/introducing-dataanalyticsbench/">Plotly</a></td>
+              </tr>
+              <tr>
+                <td>Kimi K3.1 Pro</td>
+                <td>~1.56 TB MXFP4 weights</td>
+                <td>GPU server / multi-node</td>
+                <td>Published shard total; Plotly: “needs a GPU server”</td>
+              </tr>
+              <tr>
+                <td>MiniMax M3.1 Flash / Inkling class</td>
+                <td>—</td>
+                <td>Plotly: can fit a 512 GB Mac Studio</td>
+                <td><a href="https://plotly.com/blog/introducing-dataanalyticsbench/">Plotly FAQ</a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>CPU-only inference is feasible for 3B–8B (and painfully for 20–27B if you have lots of RAM and time). It is not a serious path for the 100B+ MoE flagships.</p>
+        <h3>Cloud GPUs, approximate</h3>
+        <p>On-demand prices change. These are <a href="https://www.runpod.io/pricing">Runpod Secure Cloud list prices, page updated 12 November 2026</a>: RTX 4090 24 GB US$0.89/hr, L40S 48 GB US$1.09/hr, A100 80 GB PCIe US$2.09/hr, H100 80 GB PCIe US$2.89/hr, H100 SXM US$4.39/hr, H200 141 GB US$5.29/hr, RTX Pro 6000 96 GB US$2.69/hr. Community Cloud is often cheaper. Use a 24 GB card for Qwen3.8-27B or Gemma 4 31B at moderate context, an 80 GB card for gpt-oss-120b, and a multi-GPU pod for Hy4 flash, GLM-5.3-Flash, DeepSeek-V4.1-Flash or Inkling 2 Small. Plotly also publishes OpenRouter <em>API</em> cost per DataAnalyticsBench run, which is a different bill from self-hosting.</p>
+      </div>
+    </section>
+
+    <section id="data">
+      <div class="wrap">
+        <h2>How much data can these models handle?</h2>
+        <p class="section-intro">There are two completely different limits. Mixing them up is the most common way people disappoint themselves with local LLMs.</p>
+
+        <h3>Limit 1 — the context window (what the model can read at once)</h3>
+        <p>A token is roughly 3–4 English characters, or about 0.75 words. For a typical CSV row of 8–12 short columns, a practical planning number is 80–200 tokens per row if you paste the raw text. That means:</p>
+        <ul>
+          <li><strong>128K context</strong> (gpt-oss, Granite 4.1): on the order of a few hundred to maybe a couple of thousand raw rows, plus the prompt and the answer — and less if columns are wide.</li>
+          <li><strong>256K context</strong> (Qwen3.8-27B native, Gemma 4 mid/large): roughly 2× that, still closer to “a sample or a sheet” than “a warehouse”.</li>
+          <li><strong>1M context</strong> (Kimi, Hy4, MiniMax, Inkling, Muse, DeepSeek V4.1 Flash, Mistral Large 4, Nemotron 3.5, GLM-5.3-Flash serving): you can keep a large schema, long tool traces, and many query results in memory. You still should not paste 20 million raw rows.</li>
+        </ul>
+        <p>A 10 MB CSV of tidy numeric data might be a few million characters (around 0.7–3 million tokens). Many mid-size windows cannot hold it. A 1 GB extract certainly will not. Filling the window also gets expensive, because attention cost grows with length, and quality often falls before you literally hit the advertised maximum.</p>
+
+        <h3>Limit 2 — agentic execution (the right pattern for real datasets)</h3>
+        <p>The model only needs: a table schema, a handful of sample rows, and the question. It writes SQL or pandas/Polars/DuckDB, your runtime executes that against the <em>full</em> file or database, and only the result set (aggregates, a preview, a chart spec) comes back. Then the dataset can be as large as DuckDB, PostgreSQL or your disk will allow — tens of gigabytes on a laptop, hundreds of gigabytes to terabytes on a warehouse — independent of the model.</p>
+        <p>Plotly’s own exam is exactly this pattern: a 19.9 million-row warehouse, four read-only tools, and no pasting of the warehouse into the prompt.</p>
+
+        <h3>Reference architecture</h3>
+        <ol class="steps">
+          <li><strong>Run a local model.</strong> Install Ollama and pull <code>qwen3.8:27b</code> (64 GB class) or <code>gpt-oss:20b</code> / <code>granite4.1:8b</code> (16 GB class). Confirm there is no cloud offload.</li>
+          <li><strong>Add a chat UI with tool calling.</strong> <a href="https://github.com/open-webui/open-webui">Open WebUI</a> talks to <code>http://localhost:11434</code> and can attach a code-execution or SQL tool. Alternatively use a notebook with <a href="https://jupyter-ai.readthedocs.io/">Jupyter AI</a>.</li>
+          <li><strong>Put the data in DuckDB or a read-only SQL engine.</strong> DuckDB can query CSV/Parquet in place:
+            <pre><code>pip install duckdb
+python -c "import duckdb; duckdb.sql(\"CREATE VIEW t AS SELECT * FROM 'data.parquet'; SELECT count(*) FROM t\").show()"</code></pre>
+          </li>
+          <li><strong>Give the model only schema + samples.</strong> <code>DESCRIBE</code>, <code>SELECT * FROM t LIMIT 5</code>, and a note about date formats and known nulls is enough.</li>
+          <li><strong>Execute generated SQL in a sandbox.</strong> Read-only role, no network, timeout, row cap on returned results (for example 1,000 rows or a pre-aggregate). Optional helpers in this design space include <a href="https://github.com/vanna-ai/vanna">Vanna</a> (text-to-SQL with a RAG layer over your schema) and pandas-oriented agent libraries. Review each project’s license and whether it sends prompts to a hosted API by default.</li>
+          <li><strong>Keep the human in the loop for writes.</strong> Analysis can be autonomous. Deletes, production UPDATEs, and external HTTP calls should not be.</li>
+        </ol>
+        <div class="note">
+          If you only need classical tabular prediction (classify or regress on a spreadsheet, no SQL narrative), look at TabPFN-2.5 as a specialist — and read its non-commercial weight license first.
+        </div>
+      </div>
+    </section>
+
+    <section id="sources">
+      <div class="wrap">
+        <h2>Sources</h2>
+        <p class="section-intro">Primary sources were fetched on 26 November 2026. Plotly’s board used here is the 25 November 2026 update. Official vendor benches are not re-run in this guide; they are quoted with links. If a link rots, treat the figure as stale.</p>
+        <div class="grid-2">
+          <div>
+            <h3>Benches and overviews</h3>
+            <ul class="src-list">
+              <li><a href="https://plotly.com/blog/introducing-dataanalyticsbench/">Plotly DataAnalyticsBench</a></li>
+              <li><a href="https://plotly.com/blog/open-models-vs-closed-models-2026/">Plotly: open vs closed models, 18–19 Nov 2026</a></li>
+              <li><a href="https://openai.com/open-models/">OpenAI open models (gpt-oss benches)</a></li>
+            </ul>
+            <h3>Official model cards and licenses</h3>
+            <ul class="src-list">
+              <li><a href="https://huggingface.co/moonshotai/Kimi-K3.1-Pro">Kimi K3.1 Pro</a> · <a href="https://huggingface.co/moonshotai/Kimi-K3.1-Pro/blob/main/LICENSE">license</a></li>
+              <li><a href="https://huggingface.co/tencent/Hy4">Hy4</a> · <a href="https://huggingface.co/tencent/Hy4-flash">Hy4 flash</a> · <a href="https://huggingface.co/tencent/Hy4/raw/main/LICENSE">Tencent Hy License 1.0</a></li>
+              <li><a href="https://huggingface.co/MiniMaxAI/MiniMax-M3.1-Flash">MiniMax M3.1 Flash</a> · <a href="https://platform.minimax.io/docs/guides/local-deploy-m3-1-flash">local deploy</a></li>
+              <li><a href="https://huggingface.co/thinkingmachines/Inkling-2-Small">Inkling 2 Small</a> · <a href="https://thinkingmachines.ai/news/inkling-2-small/">announcement</a></li>
+              <li><a href="https://huggingface.co/Qwen/Qwen3.8-27B">Qwen3.8-27B</a> · <a href="https://huggingface.co/Qwen/Qwen3.8-27B/blob/main/LICENSE">Apache 2.0</a></li>
+              <li><a href="https://huggingface.co/zai-org/GLM-5.3-Flash">GLM-5.3-Flash</a> · <a href="https://z.ai/blog/glm-5.3-flash">Z.AI blog</a></li>
+              <li><a href="https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash">DeepSeek-V4.1-Flash</a></li>
+              <li><a href="https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B">Muse Spark Open</a> · <a href="https://research.meta.ai/blog/muse-spark-open">Meta blog</a></li>
+              <li><a href="https://huggingface.co/mistralai/Mistral-Large-4-1T-A52B">Mistral Large 4</a> · <a href="https://mistral.ai/news/mistral-large-4-oss/">Mistral announcement</a></li>
+              <li><a href="https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16">Nemotron 3.5 Super VL</a></li>
+              <li><a href="https://huggingface.co/openai/gpt-oss-120b">gpt-oss-120b</a> · <a href="https://huggingface.co/openai/gpt-oss-20b">gpt-oss-20b</a></li>
+              <li><a href="https://huggingface.co/google/gemma-4-31B-it">Gemma 4 31B-IT</a> · <a href="https://opensource.googleblog.com/2026/03/gemma-4-expanding-the-gemmaverse-with-apache-20.html">Apache 2.0 announcement</a></li>
+              <li><a href="https://huggingface.co/ibm-granite/granite-4.1-30b">Granite 4.1 30B</a> · <a href="https://www.ibm.com/granite/docs/models/granite4-1">IBM docs</a></li>
+              <li><a href="https://huggingface.co/Qwen/Qwen3-Coder-Next">Qwen3-Coder-Next</a> · <a href="https://arxiv.org/html/2603.00729v1">technical report</a></li>
+              <li><a href="https://huggingface.co/allenai/Olmo-3-1125-32B">OLMo 3 32B</a> · <a href="https://allenai.org/blog/olmo3">Ai2 blog</a></li>
+              <li><a href="https://huggingface.co/Prior-Labs/tabpfn_2_5">TabPFN-2.5</a> · <a href="https://docs.priorlabs.ai/models">Prior Labs docs</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3>Install and pricing</h3>
+            <ul class="src-list">
+              <li><a href="https://ollama.com/library/qwen3.8">Ollama qwen3.8</a></li>
+              <li><a href="https://ollama.com/library/gpt-oss">Ollama gpt-oss</a></li>
+              <li><a href="https://ollama.com/library/gemma4">Ollama gemma4</a></li>
+              <li><a href="https://ollama.com/library/granite4.1/tags">Ollama granite4.1 tags</a></li>
+              <li><a href="https://www.runpod.io/pricing">Runpod GPU pricing (updated 12 Nov 2026)</a></li>
+              <li><a href="https://github.com/open-webui/open-webui">Open WebUI</a></li>
+              <li><a href="https://github.com/vanna-ai/vanna">Vanna</a></li>
+              <li><a href="https://jupyter-ai.readthedocs.io/">Jupyter AI docs</a></li>
+            </ul>
+            <h3>Caveats</h3>
+            <ul>
+              <li>Vendor self-reported scores can use different harnesses, decoding settings and dates than Plotly’s board. They are not interchangeable.</li>
+              <li>DataAnalyticsBench is one domain (synthetic wind-energy operations), in English, with one harness. Plotly runs each model once and treats a one- or two-question gap as close to a tie.</li>
+              <li>This landscape moves quickly. Recheck the official card before you spend money on GPUs or lock a license review.</li>
+              <li>No model on the open-weight board had a perfect 43/43 as of 25 November 2026.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>Built as a static, no-analytics reference on 26 November 2026. Quotes and scores belong to their original authors. Always read the LICENSE file that ships with the weights before you deploy.</p>
+    </div>
+  </footer>
+  <script src="app.js"></script>
+</body>
+</html>
