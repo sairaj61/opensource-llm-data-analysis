@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Beginner guide: RAG, LoRA/QLoRA fine-tuning, and training a tiny GPT from scratch, with a glossary and copy-paste commands. Updated 26 November 2026.">
   <title>Build on these models: RAG, fine-tuning, training from scratch</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20261126-flow">
 </head>
 <body>
   <header class="site">
@@ -51,13 +51,33 @@
         <p>A <strong>prompt</strong> is the text you send in that request. <strong>RAG</strong> (retrieval-augmented generation) means searching your own files and pasting the matching passages into the prompt. <strong>Fine-tuning</strong> means continuing training so some weights change. <strong>Pretraining</strong> means the first, huge training run that creates those weights from random numbers.</p>
 
         <div class="flow" aria-label="Decision flow">
-          <div class="box"><strong>1. What is missing?</strong><span>Facts, a format, or the whole model.</span></div>
-          <span class="arr" aria-hidden="true">→</span>
-          <div class="box"><strong>Facts that change</strong><span>Notes, policies, rows. Use RAG or SQL.</span></div>
-          <span class="arr" aria-hidden="true">→</span>
-          <div class="box"><strong>A stable format</strong><span>Always this SQL shape. Fine-tune.</span></div>
-          <span class="arr" aria-hidden="true">→</span>
-          <div class="box"><strong>A new model</strong><span>Only if you are a lab. Learn on nanoGPT.</span></div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">1. What is missing?<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">Facts, a format, or the whole model.</p>
+            </div>
+            <span class="arr" aria-hidden="true">→</span>
+          </div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">Facts that change<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">Notes, policies, rows. Use RAG or SQL.</p>
+            </div>
+            <span class="arr" aria-hidden="true">→</span>
+          </div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">A stable format<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">Always this SQL shape. Fine-tune.</p>
+            </div>
+            <span class="arr" aria-hidden="true">→</span>
+          </div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">A new model<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">Only if you are a lab. Learn on nanoGPT.</p>
+            </div>
+          </div>
         </div>
 
         <div class="table-wrap">
@@ -123,17 +143,47 @@
           <li>Build a prompt: the question, then the chunks, each labelled with its filename. That labelling is how the answer can cite sources.</li>
         </ol>
         <div class="flow" aria-label="Document RAG flow">
-          <div class="box"><strong>Files</strong><span>Notes on disk</span></div>
-          <span class="arr" aria-hidden="true">→</span>
-          <div class="box"><strong>Chunks</strong><span>Short overlapping pieces</span></div>
-          <span class="arr" aria-hidden="true">→</span>
-          <div class="box"><strong>Embeddings</strong><span>One number-list each</span></div>
-          <span class="arr" aria-hidden="true">→</span>
-          <div class="box"><strong>Vector store</strong><span>Chroma, FAISS, or pgvector</span></div>
-          <span class="arr" aria-hidden="true">→</span>
-          <div class="box"><strong>Prompt</strong><span>Question plus cited chunks</span></div>
-          <span class="arr" aria-hidden="true">→</span>
-          <div class="box"><strong>Answer</strong><span>Chat model, sources named</span></div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">Files<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">Notes on disk</p>
+            </div>
+            <span class="arr" aria-hidden="true">→</span>
+          </div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">Chunks<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">Short overlapping pieces</p>
+            </div>
+            <span class="arr" aria-hidden="true">→</span>
+          </div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">Embeddings<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">One number-list each</p>
+            </div>
+            <span class="arr" aria-hidden="true">→</span>
+          </div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">Vector store<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">Chroma, FAISS, or pgvector</p>
+            </div>
+            <span class="arr" aria-hidden="true">→</span>
+          </div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">Prompt<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">Question plus cited chunks</p>
+            </div>
+            <span class="arr" aria-hidden="true">→</span>
+          </div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">Answer<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">Chat model, sources named</p>
+            </div>
+          </div>
         </div>
         <div class="glance">
           <article>
@@ -155,15 +205,40 @@
         <p>Why: a warehouse does not fit in the context window. The <a href="index.html#data">model guide</a> uses this pattern for that reason.</p>
         <p>When: the source of truth is a table, not a paragraph. Prefer this over document RAG for “what was the total in 2024?”</p>
         <div class="flow" aria-label="SQL tool-use flow">
-          <div class="box"><strong>Schema + 5 rows</strong><span>Not the full file</span></div>
-          <span class="arr" aria-hidden="true">→</span>
-          <div class="box"><strong>Chat model</strong><span>Writes one SELECT</span></div>
-          <span class="arr" aria-hidden="true">→</span>
-          <div class="box"><strong>Check</strong><span>Single read-only query</span></div>
-          <span class="arr" aria-hidden="true">→</span>
-          <div class="box"><strong>DuckDB</strong><span>Runs it on the real table</span></div>
-          <span class="arr" aria-hidden="true">→</span>
-          <div class="box"><strong>Result table</strong><span>Shown to you</span></div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">Schema + 5 rows<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">Not the full file</p>
+            </div>
+            <span class="arr" aria-hidden="true">→</span>
+          </div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">Chat model<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">Writes one SELECT</p>
+            </div>
+            <span class="arr" aria-hidden="true">→</span>
+          </div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">Check<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">Single read-only query</p>
+            </div>
+            <span class="arr" aria-hidden="true">→</span>
+          </div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">DuckDB<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">Runs it on the real table</p>
+            </div>
+            <span class="arr" aria-hidden="true">→</span>
+          </div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">Result table<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">Shown to you</p>
+            </div>
+          </div>
         </div>
         <div class="glance">
           <article>
@@ -407,15 +482,40 @@ print(con.execute(sql).fetchdf())</code></pre>
         <p>Prompt the model if a clear instruction plus the schema is enough. Use RAG or SQL if the missing piece is a fact that lives in a file. Fine-tune when you have many examples of a behaviour you want every time, such as “reply with one DuckDB SELECT and no prose,” and prompting still wanders.</p>
         <p>Suggested first project: text-to-SQL on one schema you can check. The schema stays in the prompt. The fine-tune teaches the dialect and the habit of answering with SQL. It should not memorize this month’s totals.</p>
         <div class="flow" aria-label="Fine-tuning flow">
-          <div class="box"><strong>Checked examples</strong><span>Question, schema, correct SQL</span></div>
-          <span class="arr" aria-hidden="true">→</span>
-          <div class="box"><strong>Holdout</strong><span>Examples you do not train on</span></div>
-          <span class="arr" aria-hidden="true">→</span>
-          <div class="box"><strong>QLoRA</strong><span>4-bit base, small adapter</span></div>
-          <span class="arr" aria-hidden="true">→</span>
-          <div class="box"><strong>Compare</strong><span>Base vs tuned, run the SQL</span></div>
-          <span class="arr" aria-hidden="true">→</span>
-          <div class="box"><strong>Export</strong><span>GGUF, then Ollama</span></div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">Checked examples<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">Question, schema, correct SQL</p>
+            </div>
+            <span class="arr" aria-hidden="true">→</span>
+          </div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">Holdout<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">Examples you do not train on</p>
+            </div>
+            <span class="arr" aria-hidden="true">→</span>
+          </div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">QLoRA<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">4-bit base, small adapter</p>
+            </div>
+            <span class="arr" aria-hidden="true">→</span>
+          </div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">Compare<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">Base vs tuned, run the SQL</p>
+            </div>
+            <span class="arr" aria-hidden="true">→</span>
+          </div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">Export<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">GGUF, then Ollama</p>
+            </div>
+          </div>
         </div>
 
         <h3>Dataset, in plain language</h3>
@@ -647,11 +747,26 @@ PY</code></pre>
         <p>What you can run yourself is a toy. Andrej Karpathy’s <a href="https://github.com/karpathy/nanoGPT">nanoGPT</a> trains a 6-layer GPT on the tiny Shakespeare file (about 1 MB). His README says that config takes about 3 minutes on one A100 and reaches a validation loss around 1.47, and that a smaller CPU run takes about 3 minutes with a worse loss around 1.88. The same README says reproducing GPT-2 (124M) on OpenWebText takes about 4 days on one 8×A100 40GB node. In November 2025 he marked nanoGPT as old and pointed people at nanochat. The Shakespeare recipe is still the small, readable one, so it is the exercise here.</p>
         <p><strong>Continued pretraining</strong> is the middle ground. You start from weights that already exist and keep doing next-token prediction on your own text (manuals, code, papers), still without chat labels. nanoGPT’s <code>train.py</code> accepts <code>--init_from=gpt2</code> (also <code>gpt2-medium</code>, <code>gpt2-large</code>, <code>gpt2-xl</code>) for that idea, but only with a dataset that uses the GPT-2 tokenizer. The character-level Shakespeare config is not that dataset. Do not point <code>--init_from=gpt2</code> at <code>train_shakespeare_char.py</code>.</p>
         <div class="flow" aria-label="Pretraining learning path">
-          <div class="box"><strong>Toy</strong><span>nanoGPT, Shakespeare, laptop or Colab</span></div>
-          <span class="arr" aria-hidden="true">→</span>
-          <div class="box"><strong>Middle</strong><span>Continue from GPT-2 on your text</span></div>
-          <span class="arr" aria-hidden="true">→</span>
-          <div class="box"><strong>Lab</strong><span>Billions of parameters, billions of tokens</span></div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">Toy<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">nanoGPT, Shakespeare, laptop or Colab</p>
+            </div>
+            <span class="arr" aria-hidden="true">→</span>
+          </div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">Middle<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">Continue from GPT-2 on your text</p>
+            </div>
+            <span class="arr" aria-hidden="true">→</span>
+          </div>
+          <div class="flow-pair">
+            <div class="flow-step">
+              <p class="flow-title">Lab<span class="flow-sep"> — </span></p>
+              <p class="flow-desc">Billions of parameters, billions of tokens</p>
+            </div>
+          </div>
         </div>
         <div class="glance">
           <article>
